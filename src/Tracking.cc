@@ -23,6 +23,8 @@
 
 #include<opencv2/core/core.hpp>
 #include<opencv2/features2d/features2d.hpp>
+#include <opencv2/imgproc/types_c.h>
+
 
 #include"ORBmatcher.h"
 #include"FrameDrawer.h"
@@ -36,6 +38,7 @@
 #include<iostream>
 
 #include<mutex>
+#include <unistd.h>
 
 
 using namespace std;
@@ -49,6 +52,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpMap(pMap), mnLastRelocFrameId(0)
 {
     // Load camera parameters from settings file
+    // pSys 在 System.cc 中的参数为 this，就是本 system
 
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
     float fx = fSettings["Camera.fx"];
@@ -203,7 +207,7 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
     return mCurrentFrame.mTcw.clone();
 }
 
-
+// rgbd 分支
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
 {
     mImGray = imRGB;
@@ -264,6 +268,8 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     return mCurrentFrame.mTcw.clone();
 }
 
+
+// 主要入口
 void Tracking::Track()
 {
     if(mState==NO_IMAGES_YET)
@@ -274,7 +280,10 @@ void Tracking::Track()
     mLastProcessedState=mState;
 
     // Get Map Mutex -> Map cannot be changed
+    // 使用 lock 占用 mutex 互斥量
     unique_lock<mutex> lock(mpMap->mMutexMapUpdate);
+
+    // mState 在 tracking 类初始化为 NO_IMAGES_YET，然后在上面的判断中变为 NOT_INITIALIZED
 
     if(mState==NOT_INITIALIZED)
     {
@@ -506,6 +515,7 @@ void Tracking::Track()
 }
 
 
+// 初始化 stereo 和 rgbd
 void Tracking::StereoInitialization()
 {
     if(mCurrentFrame.N>500)
@@ -775,6 +785,7 @@ bool Tracking::TrackReferenceKeyFrame()
     Optimizer::PoseOptimization(&mCurrentFrame);
 
     // Discard outliers
+    // 丢弃异常值
     int nmatchesMap = 0;
     for(int i =0; i<mCurrentFrame.N; i++)
     {
@@ -864,6 +875,7 @@ void Tracking::UpdateLastFrame()
     }
 }
 
+// 另外一个track
 bool Tracking::TrackWithMotionModel()
 {
     ORBmatcher matcher(0.9,true);
@@ -1060,6 +1072,7 @@ bool Tracking::NeedNewKeyFrame()
         return false;
 }
 
+// 8/7 17:17
 void Tracking::CreateNewKeyFrame()
 {
     if(!mpLocalMapper->SetNotStop(true))
@@ -1132,6 +1145,7 @@ void Tracking::CreateNewKeyFrame()
         }
     }
 
+// 插入关键帧？
     mpLocalMapper->InsertKeyFrame(pKF);
 
     mpLocalMapper->SetNotStop(false);

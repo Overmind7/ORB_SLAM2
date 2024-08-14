@@ -161,6 +161,7 @@ public:
     std::vector<std::size_t> mGrid[FRAME_GRID_COLS][FRAME_GRID_ROWS];
 
     // Camera pose.
+    // 相机姿态
     cv::Mat mTcw;
 
     // Current and Next Frame id.

@@ -30,6 +30,7 @@
 
 #include<mutex>
 #include<thread>
+#include <unistd.h>
 
 
 namespace ORB_SLAM2
@@ -100,6 +101,7 @@ bool LoopClosing::CheckNewKeyFrames()
     return(!mlpLoopKeyFrameQueue.empty());
 }
 
+// 闭环检测
 bool LoopClosing::DetectLoop()
 {
     {

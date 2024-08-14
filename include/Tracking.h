@@ -40,6 +40,7 @@
 
 #include <mutex>
 
+
 namespace ORB_SLAM2
 {
 
@@ -111,6 +112,7 @@ public:
     list<bool> mlbLost;
 
     // True if local mapping is deactivated and we are performing only localization
+    // !
     bool mbOnlyTracking;
 
     void Reset();
