@@ -23,4 +23,5 @@ Vocabulary/ORBvoc.txt
 build/
 *~
 lib/
-
+.DS_Store
+*/.DS_Store 
