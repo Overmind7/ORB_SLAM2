@@ -156,6 +156,7 @@ void KeyFrame::UpdateBestCovisibles()
     mvOrderedWeights = vector<int>(lWs.begin(), lWs.end());    
 }
 
+// 得到当前帧的连接关键帧，共视关键帧的集合包含了连接关键帧，但连接关键帧是其中共视关系最强的一部分。
 set<KeyFrame*> KeyFrame::GetConnectedKeyFrames()
 {
     unique_lock<mutex> lock(mMutexConnections);

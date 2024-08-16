@@ -72,27 +72,37 @@ void KeyFrameDatabase::clear()
     mvInvertedFile.resize(mpVoc->size());
 }
 
-
+// 寻找当前关键帧的闭环候选关键帧，返回候选关键帧的列表，按照相似度从大到小排列
+// 输入：当前关键帧，最小相似度阈值
+// 输出：候选关键帧的列表
 vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float minScore)
 {
+    // step1. 找出当前关键帧的所有共视关键帧
     set<KeyFrame*> spConnectedKeyFrames = pKF->GetConnectedKeyFrames();
+    // 储存闭环候选关键帧的列表
     list<KeyFrame*> lKFsSharingWords;
 
+    // step2. 找出所有具有相同BOW但不直接相连的关键帧
+    // 对于每个关键帧，如果该关键帧没有直接连接到当前关键帧，且该关键帧没有被其他关键帧作为候选关键帧，则将该关键帧加入候选关键帧列表
     // Search all keyframes that share a word with current keyframes
     // Discard keyframes connected to the query keyframe
     {
         unique_lock<mutex> lock(mMutex);
 
+        // 遍历所有BoW词向量
+        // for(DBoW2::BowVector vit : pKF)
         for(DBoW2::BowVector::const_iterator vit=pKF->mBowVec.begin(), vend=pKF->mBowVec.end(); vit != vend; vit++)
         {
             list<KeyFrame*> &lKFs =   mvInvertedFile[vit->first];
-
+            // 遍历所有含有该词向量的关键帧
+            // for(KeyFrame *pKFi : lKFs)
             for(list<KeyFrame*>::iterator lit=lKFs.begin(), lend= lKFs.end(); lit!=lend; lit++)
             {
                 KeyFrame* pKFi=*lit;
                 if(pKFi->mnLoopQuery!=pKF->mnId)
                 {
                     pKFi->mnLoopWords=0;
+                    // 如果该关键帧与当前关键帧不直接相连
                     if(!spConnectedKeyFrames.count(pKFi))
                     {
                         pKFi->mnLoopQuery=pKF->mnId;
@@ -110,23 +120,27 @@ vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float mi
     list<pair<float,KeyFrame*> > lScoreAndMatch;
 
     // Only compare against those keyframes that share enough words
+    // 计算共视关键帧的最大词数
     int maxCommonWords=0;
     for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
     {
-        if((*lit)->mnLoopWords>maxCommonWords)
+        // (*lit)是对指针 lit 的引用，获取指针所指的对象，即 KeyFrame* pKFi
+        if((*lit)->mnLoopWords > maxCommonWords)
             maxCommonWords=(*lit)->mnLoopWords;
     }
 
     int minCommonWords = maxCommonWords*0.8f;
 
+    // 这里定义的 nscores 变量没有用到
+    // 表示通过初步筛选的KeyFrame数量。
     int nscores=0;
-
+    // step3. 以最大相似度的0.8倍为阈值筛选筛选候选关键帧
     // Compute similarity score. Retain the matches whose score is higher than minScore
     for(list<KeyFrame*>::iterator lit=lKFsSharingWords.begin(), lend= lKFsSharingWords.end(); lit!=lend; lit++)
     {
         KeyFrame* pKFi = *lit;
 
-        if(pKFi->mnLoopWords>minCommonWords)
+        if(pKFi->mnLoopWords > minCommonWords)
         {
             nscores++;
 
@@ -144,6 +158,7 @@ vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float mi
     list<pair<float,KeyFrame*> > lAccScoreAndMatch;
     float bestAccScore = minScore;
 
+    // step4. 统计候选关键帧的共视关键帧组的相似度得分
     // Lets now accumulate score by covisibility
     for(list<pair<float,KeyFrame*> >::iterator it=lScoreAndMatch.begin(), itend=lScoreAndMatch.end(); it!=itend; it++)
     {
@@ -172,6 +187,7 @@ vector<KeyFrame*> KeyFrameDatabase::DetectLoopCandidates(KeyFrame* pKF, float mi
             bestAccScore=accScore;
     }
 
+    // step5. 取相似度得分高于0.75倍最高相似度的组，作为最优匹配关键帧
     // Return all those keyframes with a score higher than 0.75*bestScore
     float minScoreToRetain = 0.75f*bestAccScore;
 
