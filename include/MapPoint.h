@@ -102,6 +102,7 @@ public:
     long unsigned int mnBALocalForKF;
     long unsigned int mnFuseCandidateForKF;
 
+    // 闭环检测用到的变量
     // Variables used by loop closing
     long unsigned int mnLoopPointForKF;
     long unsigned int mnCorrectedByKF;

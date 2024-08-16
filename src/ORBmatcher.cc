@@ -824,6 +824,7 @@ int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F
     return nmatches;
 }
 
+// 将地图点与帧中图像的特征点匹配,实现地图点融合
 int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const float th)
 {
     cv::Mat Rcw = pKF->GetRotation();
@@ -841,6 +842,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
 
     const int nMPs = vpMapPoints.size();
 
+    // 遍历所有地图点
     for(int i=0; i<nMPs; i++)
     {
         MapPoint* pMP = vpMapPoints[i];
@@ -851,6 +853,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
         if(pMP->isBad() || pMP->IsInKeyFrame(pKF))
             continue;
 
+        // // step1. 将地图点反投影到相机成像平面上
         cv::Mat p3Dw = pMP->GetWorldPos();
         cv::Mat p3Dc = Rcw*p3Dw + tcw;
 
@@ -877,15 +880,18 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
         const float dist3D = cv::norm(PO);
 
         // Depth must be inside the scale pyramid of the image
+        // 地图点的观测距离
         if(dist3D<minDistance || dist3D>maxDistance )
             continue;
 
         // Viewing angle must be less than 60 deg
+        // 地图点的观测方向
         cv::Mat Pn = pMP->GetNormal();
 
         if(PO.dot(Pn)<0.5*dist3D)
             continue;
 
+        // 在投影位置寻找图像特征点
         int nPredictedLevel = pMP->PredictScale(dist3D,pKF);
 
         // Search in a radius
@@ -910,11 +916,13 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
 
             const int &kpLevel= kp.octave;
 
+            // 金字塔层级接近
             if(kpLevel<nPredictedLevel-1 || kpLevel>nPredictedLevel)
                 continue;
 
             if(pKF->mvuRight[idx]>=0)
             {
+                // 使用卡方检验检查重投影误差,单目和双目的自由度不同
                 // Check reprojection error in stereo
                 const float &kpx = kp.pt.x;
                 const float &kpy = kp.pt.y;
@@ -939,6 +947,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
                     continue;
             }
 
+            // 检验描述子距离
             const cv::Mat &dKF = pKF->mDescriptors.row(idx);
 
             const int dist = DescriptorDistance(dMP,dKF);
@@ -951,6 +960,9 @@ int ORBmatcher::Fuse(KeyFrame *pKF, const vector<MapPoint *> &vpMapPoints, const
         }
 
         // If there is already a MapPoint replace otherwise add new measurement
+        // 与最近特征点的描述子距离足够小,就进行地图点融合
+        // 地图点反投影位置上存在其他地图点,则使用观测更多的地图点替换
+        // 地图点反投影对应位置上不存在地图点,则添加新的地图点及其观测
         if(bestDist<=TH_LOW)
         {
             MapPoint* pMPinKF = pKF->GetMapPoint(bestIdx);
