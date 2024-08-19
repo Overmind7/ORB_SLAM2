@@ -661,6 +661,7 @@ void LocalMapping::InterruptBA()
     mbAbortBA = true;
 }
 
+// 删除冗余关键帧
 void LocalMapping::KeyFrameCulling()
 {
     // Check redundant keyframes (only local keyframes)
