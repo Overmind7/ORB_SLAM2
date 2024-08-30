@@ -796,7 +796,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     solver->setUserLambdaInit(1e-16);
     optimizer.setAlgorithm(solver);
 
-    const vector<KeyFrame*> vpKFs = pMap->GetAllKeyFrames();
+    const vector<KeyFrame*> vpKFs = pMap->GetAllKeyFrames();    // 所有的关键帧
     const vector<MapPoint*> vpMPs = pMap->GetAllMapPoints();
 
     const unsigned int nMaxKFid = pMap->GetMaxKFid();
@@ -808,6 +808,10 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     const int minFeat = 100;
 
     // Set KeyFrame vertices
+    // 设置关键帧顶点
+    // 遍历所有关键帧，创建g2o顶点并设置其估计值。
+    // 如果关键帧在CorrectedSim3中，则使用校正后的Sim3变换，否则使用当前的位姿。
+    // 如果关键帧是回环关键帧，则固定该顶点。
     for(size_t i=0, iend=vpKFs.size(); i<iend;i++)
     {
         KeyFrame* pKF = vpKFs[i];
@@ -833,6 +837,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
             VSim3->setEstimate(Siw);
         }
 
+        // pLoopKF 是 mpMatchedKF，闭环检测关键帧
         if(pKF==pLoopKF)
             VSim3->setFixed(true);
 
@@ -846,6 +851,9 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     }
 
 
+    // 设置回环边
+    // 遍历回环连接关系，创建回环边并添加到优化器中。
+    // 边的信息矩阵为单位矩阵。
     set<pair<long unsigned int,long unsigned int> > sInsertedEdges;
 
     const Eigen::Matrix<double,7,7> matLambda = Eigen::Matrix<double,7,7>::Identity();
@@ -881,7 +889,11 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
         }
     }
 
+
     // Set normal edges
+    // 设置普通边？
+    // 遍历所有关键帧，设置 spanning tree edges、loop edges 和 covisibility graph edges。
+    // 这些边用于连接关键帧，形成优化图。
     for(size_t i=0, iend=vpKFs.size(); i<iend; i++)
     {
         KeyFrame* pKF = vpKFs[i];
@@ -985,9 +997,14 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     }
 
     // Optimize!
+    // 优化
+    // 初始化优化并进行20次迭代
     optimizer.initializeOptimization();
     optimizer.optimize(20);
 
+    // 恢复优化后的位姿和地图点
+    // 遍历所有关键帧，恢复优化后的位姿并更新关键帧的位姿。
+    // 遍历所有地图点，使用优化后的Sim3变换更新地图点的世界坐标，并更新其法线和深度信息。
     unique_lock<mutex> lock(pMap->mMutexMapUpdate);
 
     // SE3 Pose Recovering. Sim3:[sR t;0 1] -> SE3:[R t/s;0 1]
@@ -1045,6 +1062,7 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
     }
 }
 
+// 优化 sim3 
 int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &vpMatches1, g2o::Sim3 &g2oS12, const float th2, const bool bFixScale)
 {
     g2o::SparseOptimizer optimizer;
@@ -1084,6 +1102,11 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
     optimizer.addVertex(vSim3);
 
     // Set MapPoint vertices
+    // 设置地图点顶点
+    // 遍历所有匹配的地图点，创建g2o顶点并设置其估计值。
+    // 地图点的估计值是其在当前帧的世界坐标。
+    // 地图点的观测值是其在当前帧的像素坐标。
+    // 观测值和估计值之间的差异用于计算误差。
     const int N = vpMatches1.size();
     const vector<MapPoint*> vpMapPoints1 = pKF1->GetMapPointMatches();
     vector<g2o::EdgeSim3ProjectXYZ*> vpEdges12;

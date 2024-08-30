@@ -436,6 +436,7 @@ bool LoopClosing::ComputeSim3()
 
 }
 
+// 闭环矫正
 void LoopClosing::CorrectLoop()
 {
     cout << "Loop detected!" << endl;
@@ -475,7 +476,7 @@ void LoopClosing::CorrectLoop()
     mvpCurrentConnectedKFs = mpCurrentKF->GetVectorCovisibleKeyFrames();
     mvpCurrentConnectedKFs.push_back(mpCurrentKF);
 
-    KeyFrameAndPose CorrectedSim3, NonCorrectedSim3;    // 存放局部关键帧组Sim3位姿传播前后的位姿
+    KeyFrameAndPose CorrectedSim3, NonCorrectedSim3;    // 存放局部关键帧组Sim3位姿传播前后的位姿，<KeyFrame *const, g2o::Sim3> >
     CorrectedSim3[mpCurrentKF]=mg2oScw;
     cv::Mat Twc = mpCurrentKF->GetPoseInverse();
 
@@ -509,7 +510,7 @@ void LoopClosing::CorrectLoop()
             NonCorrectedSim3[pKFi]=g2oSiw;
         }
 
-        // step1.3. 将Sim3位姿传播到局部地图点上
+        // step1.3. 将Sim3位姿传播到局部地图点上（局部关键帧组的地图点）
         // Correct all MapPoints obsrved by current keyframe and neighbors, so that they align with the other side of the loop
         for(KeyFrameAndPose::iterator mit=CorrectedSim3.begin(), mend=CorrectedSim3.end(); mit!=mend; mit++)
         {
@@ -593,26 +594,35 @@ void LoopClosing::CorrectLoop()
     // step3. BA优化
     // step3.0. 查找回环连接边,用于和生成树共同组成本质图
     // After the MapPoint fusion, new links in the covisibility graph will appear attaching both sides of the loop
+    // 在闭环矫正过程中，用相似变换Sim3矫正尺度漂移，将闭环的误差均摊到本质图中
     map<KeyFrame*, set<KeyFrame*> > LoopConnections;
 
     for(vector<KeyFrame*>::iterator vit=mvpCurrentConnectedKFs.begin(), vend=mvpCurrentConnectedKFs.end(); vit!=vend; vit++)
     {
         KeyFrame* pKFi = *vit;
+        // 得到闭环矫正前的共视关系
         vector<KeyFrame*> vpPreviousNeighbors = pKFi->GetVectorCovisibleKeyFrames();
 
         // Update connections. Detect new links.
-        pKFi->UpdateConnections();
+        pKFi->UpdateConnections();  // 只要关键帧和地图点的关系发生变化，就要调用此函数，在本循环中第一次调用是由于SearhAndFuse函数。
         // 闭环矫正后的共视关系 - 闭环矫正前的共视关系 = 闭环带来的新共视关系
-        LoopConnections[pKFi]=pKFi->GetConnectedKeyFrames();
+        LoopConnections[pKFi]=pKFi->GetConnectedKeyFrames();    // 得到连接关键帧，<局部关键帧， set<局部关键帧的连接关键帧>>
+        // 从闭环中删除update前的共视关系
         for(vector<KeyFrame*>::iterator vit_prev=vpPreviousNeighbors.begin(), vend_prev=vpPreviousNeighbors.end(); vit_prev!=vend_prev; vit_prev++)
         {
             LoopConnections[pKFi].erase(*vit_prev);
         }
+        // 从闭环中删除自身
         for(vector<KeyFrame*>::iterator vit2=mvpCurrentConnectedKFs.begin(), vend2=mvpCurrentConnectedKFs.end(); vit2!=vend2; vit2++)
         {
             LoopConnections[pKFi].erase(*vit2);
         }
     }
+    // 最后得到了融合后带来的新连接关系，将其加入到本质图中
+
+    // Add loop edge
+    mpMatchedKF->AddLoopEdge(mpCurrentKF);
+    mpCurrentKF->AddLoopEdge(mpMatchedKF);
 
     // step3.1. 本质图BA优化
     // Optimize graph
@@ -620,9 +630,9 @@ void LoopClosing::CorrectLoop()
 
     mpMap->InformNewBigChange();
 
-    // Add loop edge
-    mpMatchedKF->AddLoopEdge(mpCurrentKF);
-    mpCurrentKF->AddLoopEdge(mpMatchedKF);
+    // // Add loop edge
+    // mpMatchedKF->AddLoopEdge(mpCurrentKF);
+    // mpCurrentKF->AddLoopEdge(mpMatchedKF);
 
     // step3.2. 全局BA优化
     // Launch a new thread to perform Global Bundle Adjustment

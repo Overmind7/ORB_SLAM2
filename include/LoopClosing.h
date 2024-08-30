@@ -129,8 +129,11 @@ protected:
     KeyFrame* mpMatchedKF;
     std::vector<ConsistentGroup> mvConsistentGroups;
     std::vector<KeyFrame*> mvpEnoughConsistentCandidates;
+    // 局部关键帧组
     std::vector<KeyFrame*> mvpCurrentConnectedKFs;
+    // 当前帧到 mwpLoopMapPoints(闭环关键帧组的地图点) 的匹配关系 mvpcurrentMatchedPoints[i] 表示当前帧第i个特征点的匹配地图点
     std::vector<MapPoint*> mvpCurrentMatchedPoints;
+    // 闭环关键帧组的地图点
     std::vector<MapPoint*> mvpLoopMapPoints;
     cv::Mat mScw;
     g2o::Sim3 mg2oScw;

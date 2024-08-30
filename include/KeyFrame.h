@@ -77,7 +77,9 @@ public:
     bool hasChild(KeyFrame* pKF);
 
     // Loop Edges
+    // 和当前帧形成回环的关键帧集合的 add 方法
     void AddLoopEdge(KeyFrame* pKF);
+    // 和当前帧形成回环的关键帧集合的 get 方法
     std::set<KeyFrame*> GetLoopEdges();
 
     // MapPoint observation functions
@@ -210,6 +212,7 @@ protected:
     std::vector< std::vector <std::vector<size_t> > > mGrid;
 
     std::map<KeyFrame*,int> mConnectedKeyFrameWeights;
+    // 所有共视关键帧,按权重从大到小排序
     std::vector<KeyFrame*> mvpOrderedConnectedKeyFrames;
     std::vector<int> mvOrderedWeights;
 
@@ -217,6 +220,7 @@ protected:
     bool mbFirstConnection;
     KeyFrame* mpParent;
     std::set<KeyFrame*> mspChildrens;
+    // 和当前帧形成回环的关键帧集合
     std::set<KeyFrame*> mspLoopEdges;
 
     // Bad flags

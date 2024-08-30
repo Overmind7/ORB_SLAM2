@@ -3,6 +3,16 @@
         "ostream": "cpp",
         "vector": "cpp",
         "list": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "future": "cpp",
+        "__node_handle": "cpp",
+        "deque": "cpp",
+        "map": "cpp",
+        "queue": "cpp",
+        "stack": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp"
     }
 }

@@ -166,6 +166,7 @@ set<KeyFrame*> KeyFrame::GetConnectedKeyFrames()
     return s;
 }
 
+// 返回所有共视关键帧,按权重从大到小排序
 vector<KeyFrame*> KeyFrame::GetVectorCovisibleKeyFrames()
 {
     unique_lock<mutex> lock(mMutexConnections);
@@ -182,6 +183,7 @@ vector<KeyFrame*> KeyFrame::GetBestCovisibilityKeyFrames(const int &N)
 
 }
 
+// 返回共视关键帧的权重排序
 vector<KeyFrame*> KeyFrame::GetCovisiblesByWeight(const int &w)
 {
     unique_lock<mutex> lock(mMutexConnections);
@@ -416,6 +418,7 @@ bool KeyFrame::hasChild(KeyFrame *pKF)
     return mspChildrens.count(pKF);
 }
 
+// 和当前帧形成回环的关键帧集合的 set 方法
 void KeyFrame::AddLoopEdge(KeyFrame *pKF)
 {
     unique_lock<mutex> lockCon(mMutexConnections);
@@ -423,6 +426,7 @@ void KeyFrame::AddLoopEdge(KeyFrame *pKF)
     mspLoopEdges.insert(pKF);
 }
 
+// 和当前帧形成回环的关键帧集合的 get 方法
 set<KeyFrame*> KeyFrame::GetLoopEdges()
 {
     unique_lock<mutex> lockCon(mMutexConnections);
