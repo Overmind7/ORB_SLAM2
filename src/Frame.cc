@@ -116,6 +116,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
+// RGBD路线使用的Frame构造函数
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
      mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
@@ -244,8 +245,10 @@ void Frame::AssignFeaturesToGrid()
     }
 }
 
+// 提取ORB特征入口函数
 void Frame::ExtractORB(int flag, const cv::Mat &im)
 {
+    // flag=0 -> left, flag=1 -> right
     if(flag==0)
         (*mpORBextractorLeft)(im,cv::Mat(),mvKeys,mDescriptors);
     else
@@ -640,6 +643,7 @@ void Frame::ComputeStereoMatches()
 }
 
 
+// 数据形式？
 void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
 {
     mvuRight = vector<float>(N,-1);
@@ -647,7 +651,10 @@ void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
 
     for(int i=0; i<N; i++)
     {
+        // mvKeys：畸变矫正前的左目特征点
         const cv::KeyPoint &kp = mvKeys[i];
+
+        // mvKeysUn：畸变矫正后的左目特征点
         const cv::KeyPoint &kpU = mvKeysUn[i];
 
         const float &v = kp.pt.y;
@@ -658,6 +665,9 @@ void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
         if(d>0)
         {
             mvDepth[i] = d;
+            // mbf：baseline
+            // kpU.pt.x：畸变矫正后的左目特征点的x坐标
+            // mbf/d：水平视差
             mvuRight[i] = kpU.pt.x-mbf/d;
         }
     }

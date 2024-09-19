@@ -630,7 +630,8 @@ void LoopClosing::CorrectLoop()
 
     mpMap->InformNewBigChange();
 
-    // // Add loop edge
+    // // Add loop edge 需要把这个移到 OptimizeEssentialGraph 前面嘛？
+    // OptimizeEssentialGraph 函数中有优化这个连接
     // mpMatchedKF->AddLoopEdge(mpCurrentKF);
     // mpCurrentKF->AddLoopEdge(mpMatchedKF);
 
